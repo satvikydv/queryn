@@ -5,9 +5,9 @@ import {
   MessageSquareText,
   Video,
   CreditCard,
-  FolderKanban,
   PlusCircle,
   Github,
+  Folder,
 } from "lucide-react";
 
 import {
@@ -27,6 +27,8 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import useProject from "@/hooks/use-project";
+import { useEffect } from "react";
 
 // Navigation items
 const mainNavItems = [
@@ -52,16 +54,12 @@ const mainNavItems = [
   },
 ];
 
-// Projects - This would typically come from your database
-const projects = [
-  { id: "1", name: "Project Alpha", href: "/projects/1" },
-  { id: "2", name: "Project Beta", href: "/projects/2" },
-  { id: "3", name: "Project Gamma", href: "/projects/3" },
-];
 
 function AppSidebar() {
   const pathname = usePathname();
   const { open } = useSidebar();
+  const { projects, projectId, setProjectId } = useProject(); //from the useProject hook that gets the projects from the server
+
   return (
     <Sidebar collapsible="icon" variant="floating">
       <SidebarHeader>
@@ -107,13 +105,19 @@ function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupLabel>Your Projects</SidebarGroupLabel>
           <SidebarMenu>
-            {projects.map((project) => (
-              <SidebarMenuItem key={project.id}>
+            {projects?.map((project) => (
+              <SidebarMenuItem key={project.name}>
                 <SidebarMenuButton asChild tooltip={project.name}>
-                  <a href={project.href}>
-                    <FolderKanban className="h-4 w-4" />
+                  <div onClick={() => setProjectId(project.id)}>
+                    <div className={cn("flex items-center justify-center bg-white text-primary rounded-sm",
+                      {
+                        'bg-primary text-white': project.id === projectId
+                      }
+                    )}>
+                      <Folder className="h-4 w-4" />
+                    </div>
                     <span>{project.name}</span>
-                  </a>
+                  </div>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             ))}

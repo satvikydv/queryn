@@ -2,6 +2,7 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "../trpc";
 
 export const projectRouter = createTRPCRouter({
+    //this is the endpoint for creating a project
     createProject: protectedProcedure.input(
         z.object({
             name: z.string(),
@@ -21,5 +22,22 @@ export const projectRouter = createTRPCRouter({
             }
         })
         return project
+    }),
+
+    //this is the endpoint for getting all projects
+    getProjects: protectedProcedure.query(async ({ctx}) => {
+        return await ctx.prisma.project.findMany({
+            where: {
+                UserToProject: {
+                    some: {
+                        userId: ctx.user.userId!,
+                    }
+                },
+                deletedAt: null,
+            },
+            include: {
+                UserToProject: true,
+            }
+        })
     })
 })

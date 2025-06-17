@@ -3,6 +3,7 @@
 import useProject from "@/hooks/use-project";
 import { useUser } from "@clerk/nextjs";
 import { ExternalLink, Github } from "lucide-react";
+import CommitLog from "./commit-log";
 import Link from "next/link";
 
 import React from "react";
@@ -49,7 +50,7 @@ function Dashboard() {
       </div>
 
       <div className="mt-8"></div>
-      Commit Log
+      <CommitLog />
     </div>
   );
 }

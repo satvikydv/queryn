@@ -1,9 +1,13 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { Document } from "@langchain/core/documents";
+import { config } from "dotenv";
+// Load environment variables from .env file
+config();
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 const model = genAI.getGenerativeModel({
-  model: "gemini-1.5-flash",
+  model: "gemini-2.5-flash",
 });
 
 export const aiSummariseCommit = async (diff: string) => {
@@ -61,3 +65,41 @@ ${diff}
 
   return response.response.text();
 };
+
+export async function summariseCode(doc: Document) {
+  console.log("Getting summary for", doc.metadata.source);
+  try {
+    const code = doc.pageContent.slice(0, 10000); // Limit to 10k characters
+  
+    const prompt = `
+  You are an intelligent senior software engineer who specializes in onboarding new developers to a codebase.
+  You are onboarding a junior software engineer and explaining to them the purpose of the file: ${doc.metadata.source}.
+  
+  Here is the code:
+  \`\`\`
+  ${code}
+  \`\`\`
+  
+  Give a concise summary of the code above, explaining its purpose and functionality in no more than 100 words.
+  `;
+  
+    const response = await model.generateContent([prompt]);
+  
+    return response.response.text(); // Optional: extract `response.text()` or equivalent if needed
+  } catch (error) {
+    return ''
+  }
+}
+
+
+export async function generateEmbeddingFromGemini(sumamry: string) {
+  const model = genAI.getGenerativeModel({
+    model: "text-embedding-004"
+  })
+  const result = await model.embedContent(sumamry)
+  const embedding = result.embedding
+  return embedding.values
+}
+
+// console.log("Gemini API Key:", process.env.GEMINI_API_KEY);
+// console.log(await generateEmbeddings("Hello world! This is a test summary for embedding generation."));

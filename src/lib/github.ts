@@ -65,10 +65,11 @@ export const pollCommits = async(projectId: string) => {
                 commitMessage: unprocessedCommits[index]!.commitMessage,
                 commitAuthorName: unprocessedCommits[index]!.commitAuthorName,
                 commitAuthorAvatar: unprocessedCommits[index]!.commitAuthorAvatar,
-                commitDate: unprocessedCommits[index]!.commitDate,
+                commitDate: new Date(unprocessedCommits[index]!.commitDate),
                 summary
             }
-        })
+        }),
+        skipDuplicates: true
     })
     return commits
 }

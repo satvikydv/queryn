@@ -7,6 +7,7 @@ import CommitLog from "./commit-log";
 import Link from "next/link";
 
 import React from "react";
+import AskQuestionCard from "./ask-question-card";
 
 function Dashboard() {
   const { project } = useProject();
@@ -44,7 +45,7 @@ function Dashboard() {
 
       <div className="mt-4">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
-          AskQuestionCard
+          <AskQuestionCard /> 
           MeetingCard
         </div>
       </div>

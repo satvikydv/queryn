@@ -7,16 +7,34 @@ import { Textarea } from '@/components/ui/textarea'
 import useProject from '@/hooks/use-project'
 import { GithubIcon } from 'lucide-react'
 import React from 'react'
+import { askQuestion } from './actions'
+import { readStreamableValue } from 'ai/rsc'
 
 function AskQuestionCard() {
     const {project} = useProject()
     const [question, setQuestion] = React.useState('')
     const [open, setOpen] = React.useState(false)
+    const [ loading, setLoading ] = React.useState(false)
+    const [filesReferences, setFilesReferences] = React.useState<{fileName: string; sourceCode: string; summary: string}[]>([])
+    const [answer, setAnswer] = React.useState('')
+
 
     const onSubmit = async (e : React.FormEvent<HTMLFormElement>) => {
+        if(!project?.id) return
         e.preventDefault()
         // window.alert(question)
+        setLoading(true)
         setOpen(true)
+
+        const {output, filesReferences} = await askQuestion(question, project.id)
+        setFilesReferences(filesReferences)
+
+        for await (const delta of readStreamableValue(output)){
+          if(delta){
+            setAnswer(ans => ans + delta)
+          }
+        }
+        setLoading(false)
     }
 
 
@@ -28,7 +46,12 @@ function AskQuestionCard() {
             <DialogTitle>
               <GithubIcon className='size-5 mr-2 inline-block' />
             </DialogTitle>
-        </DialogHeader>
+          </DialogHeader>
+            {answer}
+            <h1>File References</h1>
+            {filesReferences.map(file => {
+              return <span>{file.fileName}</span>
+            })}
         </DialogContent>
       </Dialog>
       <Card className='relative col-span-2'>

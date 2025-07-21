@@ -9,6 +9,9 @@ import { GithubIcon } from 'lucide-react'
 import React from 'react'
 import { askQuestion } from './actions'
 import { readStreamableValue } from 'ai/rsc'
+import MDEditor from '@uiw/react-md-editor'
+import { set } from 'date-fns'
+import CodeReferences from './code-references'
 
 function AskQuestionCard() {
     const {project} = useProject()
@@ -20,14 +23,16 @@ function AskQuestionCard() {
 
 
     const onSubmit = async (e : React.FormEvent<HTMLFormElement>) => {
+      setAnswer('')
+      setFilesReferences([])
         if(!project?.id) return
         e.preventDefault()
         // window.alert(question)
         setLoading(true)
-        setOpen(true)
 
         const {output, filesReferences} = await askQuestion(question, project.id)
         setFilesReferences(filesReferences)
+        setOpen(true)
 
         for await (const delta of readStreamableValue(output)){
           if(delta){
@@ -38,40 +43,79 @@ function AskQuestionCard() {
     }
 
 
-  return (
-    <>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              <GithubIcon className='size-5 mr-2 inline-block' />
-            </DialogTitle>
-          </DialogHeader>
-            {answer}
-            <h1>File References</h1>
-            {filesReferences.map(file => {
-              return <span>{file.fileName}</span>
-            })}
-        </DialogContent>
-      </Dialog>
-      <Card className='relative col-span-2'>
-        <CardHeader>
-          <CardTitle>
-            Ask a Question
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={onSubmit}>
-            <Textarea placeholder="Ask a question about your project..." value={question} onChange={e => setQuestion(e.target.value)} />
-            <div className="h-4"></div>
-            <Button type='submit'>
-              Ask
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-    </>
-  )
+  
+return (
+  <>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogContent className='sm:max-w-[80vw] max-h-[90vh] flex flex-col'>
+        <DialogHeader>
+          <DialogTitle>
+            <GithubIcon className='size-5 mr-2 inline-block' />
+            Code Analysis Results
+          </DialogTitle>
+        </DialogHeader>
+
+        {/* Scrollable content area */}
+        <div className='flex-1 overflow-hidden flex flex-col min-h-0'>
+          {/* Answer section */}
+          <div className='mb-4'>
+            <MDEditor.Markdown
+              source={answer}
+              className="
+                max-h-[25vh]
+                overflow-auto
+                rounded-md
+                p-4
+                bg-muted
+                border
+                border-border
+                shadow-sm
+                prose
+                dark:prose-invert
+                prose-code:bg-muted/50
+                prose-code:px-1
+                prose-code:py-0.5
+                prose-code:rounded
+                prose-code:text-sm
+                text-sm
+              "
+            />
+          </div>
+          
+          {/* Code references section */}
+          <div className='flex-1 min-h-0'>
+            <h3 className='text-lg font-semibold mb-2'>File References</h3>
+            <CodeReferences filesReferences={filesReferences} />
+          </div>
+        </div>
+
+        {/* Fixed footer */}
+        <div className='pt-4 border-t'>
+          <Button type='button' onClick={()=>{setOpen(false)}}>
+            Close
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+    
+    <Card className='relative col-span-2'>
+      <CardHeader>
+        <CardTitle>
+          Ask a Question
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={onSubmit}>
+          <Textarea placeholder="Ask a question about your project..." value={question} onChange={e => setQuestion(e.target.value)} />
+          <div className="h-4"></div>
+          <Button type='submit' disabled={loading} >
+            Ask
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
+  </>
+)
 }
 
 export default AskQuestionCard

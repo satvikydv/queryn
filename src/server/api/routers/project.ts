@@ -14,7 +14,7 @@ export const projectRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const project = await ctx.prisma.project.create({
+      const project = await ctx.db.project.create({
         data: {
           name: input.name,
           githubUrl: input.githubUrl,
@@ -34,7 +34,7 @@ export const projectRouter = createTRPCRouter({
 
   //this is the endpoint for getting all projects
   getProjects: protectedProcedure.query(async ({ ctx }) => {
-    return await ctx.prisma.project.findMany({
+    return await ctx.db.project.findMany({
       where: {
         UserToProject: {
           some: {
@@ -48,6 +48,8 @@ export const projectRouter = createTRPCRouter({
       },
     });
   }),
+
+  //this is the endpoint for getting the commit history of a project
   getCommits: protectedProcedure
     .input(
       z.object({
@@ -55,8 +57,27 @@ export const projectRouter = createTRPCRouter({
       }),
     )
     .query(async ({ ctx, input }) => {
+      // pollCommits(input.projectId).then().catch(console.error)
       return await ctx.db.commit.findMany({
         where: { projectId: input.projectId },
       });
     }),
+
+    saveAnswer: protectedProcedure
+      .input(z.object({
+        projectId: z.string(),
+        question: z.string(),
+        answer: z.string(),
+        filesReferences: z.any()
+      })).mutation(async ({ ctx, input }) =>{
+        return await ctx.db.question.create({
+          data: {
+            projectId: input.projectId,
+            question: input.question,
+            answer: input.answer,
+            filesReferences: input.filesReferences,
+            userId: ctx.user.userId!,
+          }
+        })
+      })
 });

@@ -1,17 +1,21 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
 generator client {
-    provider = "prisma-client-js"
-    output   = "app/generated/prisma/client"
-    previewFeatures = ["postgresqlExtensions"]
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
-    provider = "postgresql"
-    url      = env("DATABASE_URL")
-    extensions = [ vector ] // Enable the vector extension for PostgreSQL
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  extensions = [ vector ] // Enable the vector extension for PostgreSQL
 }
+
 
 model User {
     id        String  @id @default(cuid())
@@ -26,6 +30,7 @@ model User {
     updatedAt DateTime @updatedAt
 
     UserToProject UserToProject[]
+    questionsAsked Question[]
 }
 
 model Project {
@@ -40,6 +45,7 @@ model Project {
     UserToProject       UserToProject[]
     Commit              Commit[]
     SourceCodeEmbedding SourceCodeEmbedding[]
+    savedQuestion       Question[]
 }
 
 model UserToProject {
@@ -88,4 +94,21 @@ model SourceCodeEmbedding {
 
     projectId String
     project   Project @relation(fields: [projectId], references: [id])
+}
+
+model Question {
+    id String @id @default(cuid())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    question String
+    answer   String?
+
+    filesReferences Json? // JSON field to store file references
+
+    projectId String
+    project   Project @relation(fields: [projectId], references: [id])
+
+    userId String
+    user   User @relation(fields: [userId], references: [id])
 }

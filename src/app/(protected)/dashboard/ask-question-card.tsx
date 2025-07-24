@@ -10,8 +10,10 @@ import React from 'react'
 import { askQuestion } from './actions'
 import { readStreamableValue } from 'ai/rsc'
 import MDEditor from '@uiw/react-md-editor'
-import { set } from 'date-fns'
 import CodeReferences from './code-references'
+import { api } from '@/trpc/react'
+import { on } from 'events'
+import { toast } from 'sonner'
 
 function AskQuestionCard() {
     const {project} = useProject()
@@ -20,6 +22,7 @@ function AskQuestionCard() {
     const [ loading, setLoading ] = React.useState(false)
     const [filesReferences, setFilesReferences] = React.useState<{fileName: string; sourceCode: string; summary: string}[]>([])
     const [answer, setAnswer] = React.useState('')
+    const saveAnswer = api.project.saveAnswer.useMutation()
 
 
     const onSubmit = async (e : React.FormEvent<HTMLFormElement>) => {
@@ -49,10 +52,30 @@ return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className='sm:max-w-[80vw] max-h-[90vh] flex flex-col'>
         <DialogHeader>
-          <DialogTitle>
-            <GithubIcon className='size-5 mr-2 inline-block' />
-            Code Analysis Results
-          </DialogTitle>
+          <div className='flex items-center gap-2'>
+            <DialogTitle>
+              <GithubIcon className='size-5 mr-2 inline-block' />
+              Code Analysis Results
+            </DialogTitle>
+
+            <Button disabled={saveAnswer.isPending} variant={"outline"} onClick={() => {
+              saveAnswer.mutate({
+                projectId: project!.id,
+                question,
+                answer,
+                filesReferences
+              }, {
+                onSuccess: () => {
+                  // Handle successful save
+                  toast.success('Answer saved successfully!')
+                },
+                onError: (error) => {
+                  // Handle error
+                  toast.error(`Failed to save answer: ${error.message}`)
+                }
+              })
+            }}> Save Answer </Button>
+          </div>
         </DialogHeader>
 
         {/* Scrollable content area */}

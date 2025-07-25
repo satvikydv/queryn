@@ -14,6 +14,7 @@ import CodeReferences from './code-references'
 import { api } from '@/trpc/react'
 import { on } from 'events'
 import { toast } from 'sonner'
+import useRefetch from '@/hooks/use-refetch'
 
 function AskQuestionCard() {
     const {project} = useProject()
@@ -45,6 +46,7 @@ function AskQuestionCard() {
         setLoading(false)
     }
 
+    const refetch = useRefetch()
 
   
 return (
@@ -68,6 +70,7 @@ return (
                 onSuccess: () => {
                   // Handle successful save
                   toast.success('Answer saved successfully!')
+                  refetch()
                 },
                 onError: (error) => {
                   // Handle error

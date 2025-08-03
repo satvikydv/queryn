@@ -49,3 +49,8 @@ yarn-error.log*
 
 notes.txt
 /generated/prisma
+
+
+# coming soon - not yet implemented
+/src/app/(protected)/dashboard/meeting-card.tsx
+/src/lib/firebase.ts

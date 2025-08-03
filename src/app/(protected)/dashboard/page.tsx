@@ -10,6 +10,7 @@ import React from "react";
 import AskQuestionCard from "./ask-question-card";
 import MeetingCard from "./meeting-card";
 import ArchiveButton from "./archive-button";
+import InviteButton from "./invite-button";
 
 function Dashboard() {
   const { project } = useProject();
@@ -41,7 +42,7 @@ function Dashboard() {
         <div className="flex items-center gap-4">
           TeamMembers
           <ArchiveButton />
-          Invite
+          <InviteButton />
         </div>
       </div>
 

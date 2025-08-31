@@ -19,7 +19,7 @@ const BillingPage = () => {
     const [creditsToBuy, setCreditsToBuy] = React.useState<number[]>([20])
     const [isLoading, setIsLoading] = React.useState(false)
     const creditsToBuyAmount = creditsToBuy[0]!
-    const pricePerCredit = 1.75 // price per credit in INR
+    const pricePerCredit = 0.75 // price per credit in INR
     const totalPrice = creditsToBuyAmount * pricePerCredit
 
     React.useEffect(() => {
@@ -264,7 +264,9 @@ const BillingPage = () => {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="text-center p-4 border rounded-lg">
-              <div className="text-2xl font-bold text-green-600">₹1.75</div>
+              <div className="text-2xl font-bold text-green-600">₹
+                {pricePerCredit}
+              </div>
               <div className="text-sm text-muted-foreground">Per Credit</div>
             </div>
             <div className="text-center p-4 border rounded-lg">

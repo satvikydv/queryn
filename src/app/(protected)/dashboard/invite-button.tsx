@@ -1,4 +1,4 @@
-'use-client'
+'use client'
 
 import { Button } from '@/components/ui/button';
 import { DialogHeader, Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
@@ -10,6 +10,21 @@ import { toast } from 'sonner';
 const InviteButton = () => {
     const {projectId} = useProject();
     const [open, setOpen] = React.useState(false);
+    const [inviteUrl, setInviteUrl] = React.useState('');
+
+    // Set the invite URL on client side only
+    React.useEffect(() => {
+        if (typeof window !== 'undefined' && projectId) {
+            setInviteUrl(`${window.location.origin}/join/${projectId}`);
+        }
+    }, [projectId]);
+
+    const handleCopyLink = () => {
+        if (inviteUrl) {
+            navigator.clipboard.writeText(inviteUrl);
+            toast.success('Invite link copied to clipboard');
+        }
+    };
 
   return (
     <>
@@ -22,13 +37,11 @@ const InviteButton = () => {
             </DialogHeader>
             <p>Copy and paste this link to invite members to the project:</p>
             <Input 
-                className='mt-4'
+                className='mt-4 cursor-pointer'
                 readOnly
-                onClick={() => {
-                    navigator.clipboard.writeText(`${window.location.origin}/join/${projectId}`)
-                    toast.success('Invite link copied to clipboard')
-                }}
-                value={`${window.location.origin}/join/${projectId}`}
+                onClick={handleCopyLink}
+                value={inviteUrl}
+                placeholder="Loading invite link..."
             />
         </DialogContent>
       </Dialog>

@@ -71,6 +71,11 @@ export async function summariseCode(doc: Document) {
   try {
     const code = doc.pageContent.slice(0, 10000); // Limit to 10k characters
   
+    // Check if code content is empty
+    if (!code || code.trim().length === 0) {
+      return `This is a ${doc.metadata.source} file with no readable content.`;
+    }
+
     const prompt = `
   You are an intelligent senior software engineer who specializes in onboarding new developers to a codebase.
   You are onboarding a junior software engineer and explaining to them the purpose of the file: ${doc.metadata.source}.
@@ -84,19 +89,31 @@ export async function summariseCode(doc: Document) {
   `;
   
     const response = await model.generateContent([prompt]);
-  
-    return response.response.text(); // Optional: extract `response.text()` or equivalent if needed
+    const summary = response.response.text();
+    
+    // Ensure we return a valid summary
+    return summary && summary.trim().length > 0 
+      ? summary 
+      : `This is a ${doc.metadata.source} file containing code that could not be summarized.`;
+      
   } catch (error) {
-    return ''
+    console.error("Error summarizing code:", error);
+    return `This is a ${doc.metadata.source} file that encountered an error during summarization.`;
   }
 }
 
 
-export async function generateEmbeddingFromGemini(sumamry: string) {
+export async function generateEmbeddingFromGemini(summary: string) {
+  // Validate input
+  if (!summary || summary.trim().length === 0) {
+    throw new Error("Summary text cannot be empty for embedding generation");
+  }
+
   const model = genAI.getGenerativeModel({
-    model: "text-embedding-004"
+    model: "gemini-embedding-001"
   })
-  const result = await model.embedContent(sumamry)
+  
+  const result = await model.embedContent(summary.trim())
   const embedding = result.embedding
   return embedding.values
 }

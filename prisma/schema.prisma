@@ -24,13 +24,14 @@ model User {
 
     imageUrl String?
     email    String  @unique
-    credits  Int?    @default(30)
+    credits  Int?    @default(100)
 
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
     UserToProject UserToProject[]
     questionsAsked Question[]
+    RazorpayTransactions RazorpayTransactions[]
 }
 
 model Project {
@@ -87,7 +88,7 @@ model Commit {
 model SourceCodeEmbedding {
     id String @id @default(cuid())
 
-    summaryEmbedding Unsupported("vector(768)")?    // Assuming a vector type for embeddings, with 768 dimensions
+    summaryEmbedding Unsupported("vector(3072)")?    // Updated to match Gemini embedding dimensions
     sourceCode       String
     fileName         String
     summary          String
@@ -111,4 +112,16 @@ model Question {
 
     userId String
     user   User @relation(fields: [userId], references: [id])
+}
+
+model RazorpayTransactions {
+    id String @id @default(cuid())
+    userId String
+    amount Int
+    credits Int
+    status String
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    user User @relation(fields: [userId], references: [id])
 }

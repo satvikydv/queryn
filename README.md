@@ -1,29 +1,71 @@
-# Create T3 App
 
-This is a [T3 Stack](https://create.t3.gg/) project bootstrapped with `create-t3-app`.
+# GitHub SaaS Platform
 
-## What's next? How do I make an app with this?
+This project is a modern SaaS (Software as a Service) web application built with Next.js, TypeScript, and Prisma ORM. It provides a collaborative platform for managing projects, integrating with GitHub, handling billing, and leveraging AI-powered features.
 
-We try to keep this project as simple as possible, so you can start with just the scaffolding we set up for you, and add additional things later when they become necessary.
+## Features
 
-If you are not familiar with the different technologies used in this project, please refer to the respective docs. If you still are in the wind, please join our [Discord](https://t3.gg/discord) and ask for help.
+- **User Authentication:** Secure sign-in and sign-up flows, with support for social login (e.g., GitHub).
+- **Project Management:** Create, join, and manage projects with dashboards, team collaboration, and Q&A modules.
+- **Meetings:** Schedule and manage meetings within projects.
+- **Billing & Payments:** Integrated with Razorpay for handling subscriptions and payments.
+- **AI Integration:** Leverages AI (Gemini) for code analysis, suggestions, or automation.
+- **GitHub Integration:** Load and interact with GitHub repositories and data.
+- **Responsive UI:** Built with a comprehensive set of reusable UI components for a consistent and modern user experience.
 
-- [Next.js](https://nextjs.org)
-- [NextAuth.js](https://next-auth.js.org)
-- [Prisma](https://prisma.io)
-- [Drizzle](https://orm.drizzle.team)
-- [Tailwind CSS](https://tailwindcss.com)
-- [tRPC](https://trpc.io)
+## Tech Stack
 
-## Learn More
+- **Frontend:** Next.js, React, TypeScript
+- **Backend:** Next.js API routes, tRPC for type-safe APIs
+- **Database:** Prisma ORM
+- **Payments:** Razorpay
+- **Authentication:** NextAuth (or similar), Firebase
+- **AI/ML:** Gemini integration
+- **Styling:** PostCSS, CSS Modules, custom UI components
 
-To learn more about the [T3 Stack](https://create.t3.gg/), take a look at the following resources:
+## Project Structure
 
-- [Documentation](https://create.t3.gg/)
-- [Learn the T3 Stack](https://create.t3.gg/en/faq#what-learning-resources-are-currently-available) — Check out these awesome tutorials
+- `src/app/`: Main application pages, layouts, and protected routes (dashboard, billing, meetings, Q&A, etc.)
+- `src/components/ui/`: Reusable UI components (buttons, dialogs, forms, etc.)
+- `src/lib/`: Utility libraries for third-party integrations (GitHub, Razorpay, Firebase, Gemini)
+- `src/server/`: Server-side logic, database access, and API endpoints
+- `prisma/`: Prisma schema and migrations
+- `generated/prisma/`: Generated Prisma client
 
-You can check out the [create-t3-app GitHub repository](https://github.com/t3-oss/create-t3-app) — your feedback and contributions are welcome!
+## Getting Started
 
-## How do I deploy this?
+1. **Install dependencies:**
+	```bash
+	npm install
+	```
 
-Follow our deployment guides for [Vercel](https://create.t3.gg/en/deployment/vercel), [Netlify](https://create.t3.gg/en/deployment/netlify) and [Docker](https://create.t3.gg/en/deployment/docker) for more information.
+2. **Set up environment variables:**
+	- Copy `.env.example` to `.env` and fill in the required values (database URL, API keys, etc.).
+
+3. **Run database migrations:**
+	```bash
+	npx prisma migrate dev
+	```
+
+4. **Start the development server:**
+	```bash
+	npm run dev
+	```
+
+5. **Access the app:**
+	- Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+## Scripts
+
+- `npm run dev` — Start the development server
+- `npm run build` — Build for production
+- `npm run start` — Start the production server
+- `npx prisma migrate dev` — Run database migrations
+
+## Contributing
+
+Contributions are welcome! Please open issues or submit pull requests for improvements or bug fixes.
+
+## License
+
+MIT

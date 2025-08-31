@@ -8,7 +8,7 @@ import { TRPCReactProvider } from "@/trpc/react";
 import { Toaster } from "sonner";
 
 export const metadata: Metadata = {
-  title: "Github SaaS",
+  title: "Queryn",
   icons: [{ rel: "icon", url: "/favicon.ico" }],
 };
 

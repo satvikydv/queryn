@@ -70,7 +70,7 @@ function AppSidebar() {
           )}
         >
           <Github className="h-5 w-5" />
-          {open && <h1 className="text-lg font-bold">Github SaaS</h1>}
+          {open && <h1 className="text-lg font-bold">Queryn</h1>}
         </div>
       </SidebarHeader>
 

@@ -24,7 +24,7 @@ function Dashboard() {
             <Github className="size-5 text-white" />
             <div className="ml-2">
               <p className="text-sm font-medium text-white">
-                This project is linket to{" "}
+                This project is linked to{" "}
                 <Link
                   href={project?.githubUrl || "#"}
                   target="_blank"

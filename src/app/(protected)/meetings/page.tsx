@@ -17,7 +17,7 @@ const MeetingsPage = () => {
               Meetings
             </h1>
             <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-              We're building something amazing for your team meetings. Stay tuned!
+              We&apos;re building something amazing for your team meetings. Stay tuned!
             </p>
           </div>
 

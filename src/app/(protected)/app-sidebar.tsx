@@ -28,7 +28,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import useProject from "@/hooks/use-project";
-import { useEffect } from "react";
 
 // Navigation items
 const mainNavItems = [
@@ -80,7 +79,6 @@ function AppSidebar() {
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarMenu>
             {mainNavItems.map(({ title, icon: Icon, href }) => {
-              const pathname = usePathname();
               const isActive = pathname === href;
 
               return (

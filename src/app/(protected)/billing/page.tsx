@@ -8,9 +8,45 @@ import { CreditCard, Info, Zap } from 'lucide-react'
 import React from 'react'
 import { toast } from 'sonner'
 
+interface RazorpayOptions {
+  key: string;
+  amount: number;
+  currency: string;
+  name: string;
+  description: string;
+  order_id: string;
+  handler: (response: RazorpayResponse) => void;
+  prefill?: {
+    name?: string;
+    email?: string;
+  };
+  theme?: {
+    color?: string;
+  };
+}
+
+interface RazorpayResponse {
+  razorpay_order_id: string;
+  razorpay_payment_id: string;
+  razorpay_signature: string;
+}
+
+interface RazorpayInstance {
+  open(): void;
+  on(event: string, handler: (response: { error: { description: string } }) => void): void;
+}
+
+interface OrderResponse {
+  keyId: string;
+  amount: number;
+  currency: string;
+  orderId: string;
+  error?: string;
+}
+
 declare global {
   interface Window {
-    Razorpay: any;
+    Razorpay: new (options: RazorpayOptions) => RazorpayInstance;
   }
 }
 
@@ -53,10 +89,10 @@ const BillingPage = () => {
           }),
         })
 
-        const order = await response.json()
+        const order = await response.json() as OrderResponse
 
         if (!response.ok) {
-          throw new Error(order.error || 'Failed to create order')
+          throw new Error(order.error ?? 'Failed to create order')
         }
 
         // Initialize Razorpay
@@ -67,7 +103,7 @@ const BillingPage = () => {
           name: 'GitHub AI',
           description: `Purchase ${credits} credits`,
           order_id: order.orderId,
-          handler: async function (response: any) {
+          handler: async function (response: RazorpayResponse) {
             try {
               // Verify payment
               const verifyResponse = await fetch('/api/razorpay/verify', {
@@ -83,14 +119,14 @@ const BillingPage = () => {
                 }),
               })
 
-              const verifyResult = await verifyResponse.json()
+              const verifyResult = await verifyResponse.json() as { error?: string }
 
               if (verifyResponse.ok) {
                 toast.success(`Successfully purchased ${credits} credits!`)
-                refetch() // Refresh user credits
+                void refetch() // Refresh user credits
                 setIsLoading(false)
               } else {
-                toast.error(verifyResult.error || 'Payment verification failed')
+                toast.error(verifyResult.error ?? 'Payment verification failed')
                 setIsLoading(false)
               }
             } catch (error) {
@@ -100,8 +136,8 @@ const BillingPage = () => {
             }
           },
           prefill: {
-            name: user?.firstName || '',
-            email: user?.email || '',
+            name: user?.firstName ?? '',
+            email: user?.email ?? '',
           },
           theme: {
             color: '#3B82F6',
@@ -116,7 +152,7 @@ const BillingPage = () => {
         const razorpay = new window.Razorpay(options)
         razorpay.open()
 
-        razorpay.on('payment.failed', function (response: any) {
+        razorpay.on('payment.failed', function (response: { error: { description: string } }) {
           toast.error('Payment failed. Please try again.')
           console.error('Payment failed:', response.error)
           setIsLoading(false)
@@ -181,7 +217,7 @@ const BillingPage = () => {
                   How credits work
                 </p>
                 <p className="text-sm text-blue-700 dark:text-blue-300">
-                  Each credit allows you to index 1 file. For example, if your project has 100 files, you'll need 100 credits to fully index it.
+                  Each credit allows you to index 1 file. For example, if your project has 100 files, you&apos;ll need 100 credits to fully index it.
                 </p>
               </div>
             </div>

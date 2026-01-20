@@ -3,17 +3,47 @@
 import useProject from '@/hooks/use-project'
 import { api } from '@/trpc/react'
 import React from 'react'
+import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 import { ExternalLink } from 'lucide-react'
 
 const CommitLog = () => {
     const {projectId, project} = useProject()
-    const { data: commits } = api.project.getCommits.useQuery({ projectId })
+    const { data: commits, isLoading } = api.project.getCommits.useQuery({ projectId })
   return (
     <>
         <ul className='space-y-6'>
-            {commits?.map((commit, commitIdx) => {
+            {isLoading ? (
+                [1,2,3].map((i) => (
+                    <li key={`skeleton-${i}`} className='relative flex gap-x-4'>
+                        <div className={cn(
+                            'h-6',
+                            'absolute left-0 top-0 w-6 flex justify-center'
+                        )}>
+                            <div className="w-px translate-x-1 bg-gray-200"></div>
+                        </div>
+                        <>
+                            <Skeleton className='h-8 w-8 rounded-full' />
+                            <div className="flex-auto rounded-md bg-white p-3 ring-1 ring-inset ring-gray-200">
+                                <div className="flex justify-between gap-x-4">
+                                    <div className='py-0.5 text-xs leading-5'>
+                                        <Skeleton className='h-4 w-24' />
+                                    </div>
+                                </div>
+                                <div className='font-semibold mt-2'>
+                                    <Skeleton className='h-5 w-40' />
+                                </div>
+                                <div className='mt-2'>
+                                    <Skeleton className='h-3 w-full' />
+                                    <div className='mt-1'><Skeleton className='h-3 w-5/6' /></div>
+                                </div>
+                            </div>
+                        </>
+                    </li>
+                ))
+            ) : (
+            commits?.map((commit, commitIdx) => {
                 return <li key={commit.id} className='relative flex gap-x-4'>
                     <div className={cn(
                         commitIdx === commits.length - 1 ? 'h-6' : '-bottom-6',
@@ -43,7 +73,7 @@ const CommitLog = () => {
                         </div>
                     </>
                 </li>
-})}
+            }))}
         </ul>
     </>
   )

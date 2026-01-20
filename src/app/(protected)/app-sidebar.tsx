@@ -28,6 +28,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import useProject from "@/hooks/use-project";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // Navigation items
 const mainNavItems = [
@@ -57,7 +58,7 @@ const mainNavItems = [
 function AppSidebar() {
   const pathname = usePathname();
   const { open } = useSidebar();
-  const { projects, projectId, setProjectId } = useProject(); //from the useProject hook that gets the projects from the server
+  const { projects, projectId, setProjectId, isLoading } = useProject(); //from the useProject hook that gets the projects from the server
 
   return (
     <Sidebar collapsible="icon" variant="floating">
@@ -103,22 +104,37 @@ function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupLabel>Your Projects</SidebarGroupLabel>
           <SidebarMenu>
-            {projects?.map((project) => (
-              <SidebarMenuItem key={project.name}>
-                <SidebarMenuButton asChild tooltip={project.name}>
-                  <div onClick={() => setProjectId(project.id)}>
-                    <div className={cn("flex items-center justify-center bg-white text-primary rounded-sm",
-                      {
-                        'bg-primary text-white': project.id === projectId
-                      }
-                    )}>
-                      <Folder className="h-4 w-4" />
+            {isLoading ? (
+              [1, 2, 3].map((i) => (
+                <SidebarMenuItem key={`skeleton-${i}`}>
+                  <SidebarMenuButton asChild>
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center justify-center bg-white text-primary rounded-sm">
+                        <Skeleton className="h-4 w-4" />
+                      </div>
+                      <Skeleton className="h-4 w-20" />
                     </div>
-                    <span>{project.name}</span>
-                  </div>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))
+            ) : (
+              projects?.map((project) => (
+                <SidebarMenuItem key={project.name}>
+                  <SidebarMenuButton asChild tooltip={project.name}>
+                    <div onClick={() => setProjectId(project.id)}>
+                      <div className={cn("flex items-center justify-center bg-white text-primary rounded-sm",
+                        {
+                          'bg-primary text-white': project.id === projectId
+                        }
+                      )}>
+                        <Folder className="h-4 w-4" />
+                      </div>
+                      <span>{project.name}</span>
+                    </div>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))
+            )}
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>

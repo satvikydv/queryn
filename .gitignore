@@ -54,3 +54,5 @@ notes.txt
 # coming soon - not yet implemented
 /src/app/(protected)/dashboard/meeting-card.tsx
 /src/lib/firebase.ts
+
+.kiro

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "../trpc";
 import { pollCommits } from "@/lib/github";
 import { checkCredits, indexGithubRepo } from "@/lib/github-loader";
+import { progressStore } from "@/lib/progress-store";
 
 export const projectRouter = createTRPCRouter({
   //this is the endpoint for creating a project
@@ -43,10 +44,42 @@ export const projectRouter = createTRPCRouter({
         },
       });
 
-      await indexGithubRepo(project.id, input.githubUrl, input.githubToken);
+      // Initialize progress tracking
+      progressStore.setProgress(project.id, {
+        processed: 0,
+        total: fileCount,
+        currentFile: '',
+        estimatedTimeRemaining: 0,
+        status: 'pending'
+      });
+
+      // Index repository with progress tracking
+      indexGithubRepo(project.id, input.githubUrl, input.githubToken, (progress) => {
+        progressStore.setProgress(project.id, {
+          ...progress,
+          status: 'in-progress'
+        });
+      }).then(() => {
+        progressStore.setProgress(project.id, {
+          processed: fileCount,
+          total: fileCount,
+          currentFile: '',
+          estimatedTimeRemaining: 0,
+          status: 'completed'
+        });
+      }).catch((error) => {
+        progressStore.setProgress(project.id, {
+          processed: 0,
+          total: fileCount,
+          currentFile: '',
+          estimatedTimeRemaining: 0,
+          status: 'error',
+          error: error.message
+        });
+      });
       
-      // Poll commits from the GitHub repository
-      await pollCommits(project.id);
+      // Poll commits from the GitHub repository (don't await, run in background)
+      pollCommits(project.id).catch(console.error);
 
       //update credits after project creation
       await ctx.db.user.update({
@@ -194,4 +227,12 @@ export const projectRouter = createTRPCRouter({
       userCredits: userCredits?.credits || 0,
     };
   }),
+
+  // Get embedding progress for a project
+  getProgress: protectedProcedure
+    .input(z.object({ projectId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const progress = progressStore.getProgress(input.projectId);
+      return progress || null;
+    }),
 });

@@ -1,6 +1,6 @@
 import { GithubRepoLoader } from "@langchain/community/document_loaders/web/github";
 import { Document } from "@langchain/core/documents";
-import { generateEmbeddingFromGemini, summariseCode } from "./gemini";
+import { generateEmbeddingsInBatches, summariseCode, type EmbeddingProgress } from "./gemini";
 import { db } from "@/server/db";
 import { Octokit } from "octokit";
 
@@ -29,11 +29,54 @@ export const indexGithubRepo = async (
   projectId: string,
   githubUrl: string,
   githubToken?: string,
+  onProgress?: (progress: EmbeddingProgress) => void
 ) => {
   const docs = await loadGithubRepo(githubUrl, githubToken);
-  const allEmbeddings = await generateEmbeddings(docs);
+  
+  console.log(`Loaded ${docs.length} files from repository`);
+  
+  // First, generate all summaries
+  console.log('Generating summaries for all files...');
+  const summaries = await Promise.all(
+    docs.map(async (doc) => {
+      try {
+        const summary = await summariseCode(doc);
+        return {
+          text: summary,
+          fileName: doc.metadata.source,
+          sourceCode: doc.pageContent
+        };
+      } catch (error) {
+        console.error(`Error summarizing ${doc.metadata.source}:`, error);
+        return null;
+      }
+    })
+  );
+  
+  // Filter out failed summaries
+  const validSummaries = summaries.filter((s): s is NonNullable<typeof s> => s !== null);
+  console.log(`Successfully generated ${validSummaries.length} summaries`);
+  
+  // Generate embeddings in batches with rate limiting
+  console.log('Starting batch embedding generation with rate limiting...');
+  const embeddingResults = await generateEmbeddingsInBatches(
+    validSummaries.map(s => ({ text: s.text, fileName: s.fileName })),
+    onProgress
+  );
+  
+  // Combine results with source code
+  const allEmbeddings = embeddingResults.map((result) => {
+    const summary = validSummaries.find(s => s.fileName === result.fileName);
+    return {
+      ...result,
+      sourceCode: summary?.sourceCode || ''
+    };
+  });
+  
+  // Save to database
+  console.log('Saving embeddings to database...');
   await Promise.allSettled(allEmbeddings.map(async (embedding, index) => {
-    console.log(`processing file ${index+1} of ${allEmbeddings.length}`);
+    console.log(`Saving to DB: file ${index+1} of ${allEmbeddings.length}`);
     if(!embedding) return
 
     const sourceCodeEmbedding = await db.sourceCodeEmbedding.create({
@@ -52,33 +95,8 @@ export const indexGithubRepo = async (
     WHERE "id" = ${sourceCodeEmbedding.id}
     `
   }))
-};
-
-const generateEmbeddings = async (docs: Document[]) => {
-    return await Promise.all(docs.map(async doc => {
-        try {
-            console.log(`Processing file: ${doc.metadata.source}`);
-            const summary = await summariseCode(doc);
-            
-            if (!summary || summary.trim().length === 0) {
-                console.warn(`Empty summary for file: ${doc.metadata.source}`);
-                throw new Error(`Failed to generate summary for ${doc.metadata.source}`);
-            }
-            
-            console.log(`Summary for ${doc.metadata.source}:`, summary.substring(0, 100) + '...');
-            const embedding = await generateEmbeddingFromGemini(summary);
-            
-            return {
-                summary,
-                embedding,
-                sourceCode: JSON.parse(JSON.stringify(doc.pageContent)),
-                fileName: doc.metadata.source,
-            }
-        } catch (error) {
-            console.error(`Error processing file ${doc.metadata.source}:`, error);
-            throw error; // Re-throw to handle at a higher level
-        }
-    }))
+  
+  console.log('Indexing complete!');
 };
 
 const getFileCount = async(path: string, octokit: Octokit, githubOwner: string, githubRepo: string, acc: number = 0)=>{

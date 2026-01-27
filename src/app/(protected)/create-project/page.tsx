@@ -2,10 +2,11 @@
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { EmbeddingProgress } from "@/components/ui/embedding-progress";
 import useRefetch from "@/hooks/use-refetch";
 import { api } from "@/trpc/react";
 import { Info } from "lucide-react";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -19,8 +20,28 @@ const CreateProject = () => {
   const { register, handleSubmit, reset } = useForm<FormInput>();
   const createProject = api.project.createProject.useMutation();
   const checkCredits = api.project.checkCredits.useMutation();
+  const [createdProjectId, setCreatedProjectId] = useState<string | null>(null);
+  const { data: progressData } = api.project.getProgress.useQuery(
+    { projectId: createdProjectId! },
+    { enabled: !!createdProjectId, refetchInterval: 1000 } // Poll every second
+  );
 
   const refetch = useRefetch();
+
+  // When project is created successfully, start progress tracking
+  useEffect(() => {
+    if (progressData?.status === 'completed') {
+      toast.success("Project indexed successfully! Redirecting...");
+      setTimeout(() => {
+        refetch();
+        reset();
+        setCreatedProjectId(null);
+      }, 2000);
+    } else if (progressData?.status === 'error') {
+      toast.error(`Error: ${progressData.error || 'Failed to index project'}`);
+      setCreatedProjectId(null);
+    }
+  }, [progressData, refetch, reset]);
 
   function onSubmit(data: FormInput) {
     // Check if the user has enough credits to create a project
@@ -33,10 +54,9 @@ const CreateProject = () => {
           githubToken: data.githubToken,
         },
         {
-          onSuccess: () => {
-            toast.success("Project created successfully");
-            refetch();
-            reset();
+          onSuccess: (project) => {
+            toast.success("Project created! Starting indexing...");
+            setCreatedProjectId(project.id);
           },
           onError: (error) => {
             toast.error(error.message);
@@ -52,6 +72,20 @@ const CreateProject = () => {
   }
 
   const hasEnoughCredits = checkCredits?.data?.userCredits ? checkCredits.data.fileCount <= checkCredits.data.userCredits : true;
+
+  // Show progress view if indexing is in progress
+  if (createdProjectId && progressData && (progressData.status === 'pending' || progressData.status === 'in-progress')) {
+    return (
+      <div className="flex min-h-[calc(100vh-10rem)] items-center justify-center p-4">
+        <EmbeddingProgress
+          processed={progressData.processed}
+          total={progressData.total}
+          currentFile={progressData.currentFile}
+          estimatedTimeRemaining={progressData.estimatedTimeRemaining}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-[calc(100vh-10rem)] items-center justify-center gap-12">

@@ -118,5 +118,85 @@ export async function generateEmbeddingFromGemini(summary: string) {
   return embedding.values
 }
 
+/**
+ * Rate limiter for Gemini API calls
+ * Free tier limits for gemini-embedding-001:
+ * - Requests Per Minute (RPM): 100
+ * - Tokens Per Minute (TPM): 30,000
+ * - Requests Per Day (RPD): 1,000
+ * 
+ * We'll use 90 RPM to be safe (~1.5 requests per second)
+ */
+const REQUESTS_PER_MINUTE = 90; // Safety margin below 100 RPM limit
+const DELAY_BETWEEN_REQUESTS = 60000 / REQUESTS_PER_MINUTE; // ~667ms
+
+/**
+ * Helper to delay execution
+ */
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+export interface EmbeddingProgress {
+  processed: number;
+  total: number;
+  currentFile: string;
+  estimatedTimeRemaining: number; // in seconds
+}
+
+/**
+ * Generate embeddings in batches with rate limiting and progress tracking
+ */
+export async function generateEmbeddingsInBatches(
+  summaries: Array<{ text: string; fileName: string }>,
+  onProgress?: (progress: EmbeddingProgress) => void
+): Promise<Array<{ embedding: number[]; fileName: string; summary: string }>> {
+  const results: Array<{ embedding: number[]; fileName: string; summary: string }> = [];
+  const totalItems = summaries.length;
+  const startTime = Date.now();
+
+  for (let i = 0; i < totalItems; i++) {
+    const item = summaries[i];
+    
+    if (!item) continue; // Skip if item is undefined
+    
+    try {
+      // Generate embedding
+      const embedding = await generateEmbeddingFromGemini(item.text);
+      results.push({
+        embedding,
+        fileName: item.fileName,
+        summary: item.text
+      });
+
+      // Calculate progress metrics
+      const processed = i + 1;
+      const elapsedTime = (Date.now() - startTime) / 1000; // in seconds
+      const averageTimePerItem = elapsedTime / processed;
+      const estimatedTimeRemaining = Math.ceil(averageTimePerItem * (totalItems - processed));
+
+      // Report progress
+      if (onProgress) {
+        onProgress({
+          processed,
+          total: totalItems,
+          currentFile: item.fileName,
+          estimatedTimeRemaining
+        });
+      }
+
+      // Rate limiting: delay before next request (except for the last one)
+      if (i < totalItems - 1) {
+        await delay(DELAY_BETWEEN_REQUESTS);
+      }
+
+    } catch (error) {
+      console.error(`Failed to generate embedding for ${item.fileName}:`, error);
+      // Continue with next file instead of failing completely
+      // You can choose to rethrow or handle differently based on requirements
+    }
+  }
+
+  return results;
+}
+
 // console.log("Gemini API Key:", process.env.GEMINI_API_KEY);
 // console.log(await generateEmbeddings("Hello world! This is a test summary for embedding generation."));

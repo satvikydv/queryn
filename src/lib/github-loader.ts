@@ -1,6 +1,7 @@
 import { GithubRepoLoader } from "@langchain/community/document_loaders/web/github";
 import { Document } from "@langchain/core/documents";
-import { generateEmbeddingsInBatches, summariseCode, type EmbeddingProgress } from "./gemini";
+import { generateEmbeddingsInBatches, type EmbeddingProgress } from "./gemini";
+import { summariseCodeWithGroq } from "./groq";
 import { db } from "@/server/db";
 import { Octokit } from "octokit";
 
@@ -40,7 +41,7 @@ export const indexGithubRepo = async (
   const summaries = await Promise.all(
     docs.map(async (doc) => {
       try {
-        const summary = await summariseCode(doc);
+        const summary = await summariseCodeWithGroq(doc);
         return {
           text: summary,
           fileName: doc.metadata.source,

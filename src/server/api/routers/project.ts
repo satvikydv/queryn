@@ -123,7 +123,20 @@ export const projectRouter = createTRPCRouter({
       // pollCommits(input.projectId).then().catch(console.error)
       return await ctx.db.commit.findMany({
         where: { projectId: input.projectId },
+        orderBy: { commitDate: 'desc' }
       });
+    }),
+
+  // Load more commits (next 10)
+  loadMoreCommits: protectedProcedure
+    .input(
+      z.object({
+        projectId: z.string(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      await pollCommits(input.projectId);
+      return { success: true };
     }),
 
   saveAnswer: protectedProcedure

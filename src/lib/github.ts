@@ -1,7 +1,7 @@
 import { db } from "@/server/db"
 import { Octokit } from "octokit"
 import axios from "axios"
-import { aiSummariseCommit } from "./gemini"
+import { batchSummariseCommits } from "./groq"
 
 export const octokit = new Octokit({
     auth: process.env.GITHUB_TOKEN,
@@ -17,7 +17,7 @@ type Response = {
     commitDate: string,
 }
 
-export const getCommitHashes = async (githubUrl: string): Promise<Response[]> => {
+export const getCommitHashes = async (githubUrl: string, limit: number = 10): Promise<Response[]> => {
     // https://github.com/docker/genai-stack
     const [ owner, repo ] = githubUrl.split("/").slice(-2)
     if (!owner || !repo) {
@@ -30,7 +30,7 @@ export const getCommitHashes = async (githubUrl: string): Promise<Response[]> =>
     // console.log(data)
     const sortedCommits = data.sort((a: any, b: any) => new Date(b.commit.author.date).getTime() - new Date(a.commit.author.date).getTime())
 
-    return sortedCommits.slice(0,10).map((commit: any) => ({
+    return sortedCommits.slice(0, limit).map((commit: any) => ({
         commitHash: commit.sha as string,
         commitMessage: commit.commit.message ?? "",
         commitAuthorName: commit.commit?.author?.name ?? "",
@@ -46,44 +46,51 @@ export const pollCommits = async(projectId: string) => {
     }
     const commitHashes = await getCommitHashes(githubUrl)
     const unprocessedCommits = await filterUnprocessedCommits(projectId, commitHashes)
-    const summaryResponse = await Promise.allSettled(unprocessedCommits.map((commit)=>{
-        return summariseCommit(githubUrl, commit.commitHash)
-    }))
-    const summaries = summaryResponse.map((response, index) => {
-        if (response.status === "fulfilled") {
-            return response.value as string
+    
+    // Fetch diffs for all unprocessed commits
+    console.log(`Fetching diffs for ${unprocessedCommits.length} commits...`);
+    const diffsToProcess = await Promise.all(
+        unprocessedCommits.map(async (commit) => {
+            try {
+                const { data } = await axios.get(`${githubUrl}/commit/${commit.commitHash}.diff`, {
+                    headers: {
+                        Accept: "application/vnd.github.v3.diff",
+                    },
+                });
+                return { diff: data, commitHash: commit.commitHash };
+            } catch (error) {
+                console.error(`Error fetching diff for ${commit.commitHash}:`, error);
+                return { diff: "", commitHash: commit.commitHash };
+            }
+        })
+    );
+    
+    // Batch process summaries with rate limiting
+    console.log('Starting batch commit summary generation with rate limiting...');
+    const summaryResults = await batchSummariseCommits(
+        diffsToProcess,
+        (processed, total) => {
+            console.log(`Summarized commit ${processed}/${total}`);
         }
-        return "Error summarising commit"
-    })
+    );
 
     const commits = await db.commit.createMany({
-        data: summaries.map((summary, index) => {
-            console.log(`processing commit ${index}`)
+        data: unprocessedCommits.map((commit, index) => {
+            const summaryResult = summaryResults.find(r => r.commitHash === commit.commitHash);
             return {
                 projectId: projectId,
-                commitHash: unprocessedCommits[index]!.commitHash,
-                commitMessage: unprocessedCommits[index]!.commitMessage,
-                commitAuthorName: unprocessedCommits[index]!.commitAuthorName,
-                commitAuthorAvatar: unprocessedCommits[index]!.commitAuthorAvatar,
-                commitDate: new Date(unprocessedCommits[index]!.commitDate),
-                summary
+                commitHash: commit.commitHash,
+                commitMessage: commit.commitMessage,
+                commitAuthorName: commit.commitAuthorName,
+                commitAuthorAvatar: commit.commitAuthorAvatar,
+                commitDate: new Date(commit.commitDate),
+                summary: summaryResult?.summary || "Error summarizing commit"
             }
         }),
         skipDuplicates: true
     })
     return commits
 }
-
-async function summariseCommit(githubUrl: string, commitHash: string) {
-    //get the diff then pass it to the AI model
-    const { data } = await axios.get(`${githubUrl}/commit/${commitHash}.diff`, {
-        headers: {
-            Accept: "application/vnd.github.v3.diff",
-        },
-    })
-    return await aiSummariseCommit(data) || "No summary available"
-}
-
 
 async function fetchProjectGithubUrl(projectId: string) {
     const project = await db.project.findUnique({

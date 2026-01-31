@@ -60,8 +60,10 @@ export default async function LandingPage() {
           <div className="hero-grid">
             <div className="hero-content">
               <div className="hero-badge">
-                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                v1.0.0 Stable
+                <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span>
+                Beta Testing
+                <span className="mx-2 text-zinc-600">|</span>
+                <span className="text-zinc-500">v0.9.1</span>
               </div>
               <h1 className="hero-title">
                 The OS for your <br />
@@ -222,7 +224,7 @@ export default async function LandingPage() {
              </div>
              <h2 className="section-title text-4xl mb-6">Ready to upgrade?</h2>
              <p className="bento-desc text-lg mb-8">
-               Join 10,000+ developers shipping better code with Queryn.
+               Join developers shipping better code with Queryn.
                Start for free, scale as you grow.
              </p>
              <Link href="/sign-in" className="btn-tech-primary text-base px-6 py-3">

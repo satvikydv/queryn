@@ -2,10 +2,7 @@ import { db } from "@/server/db"
 import { Octokit } from "octokit"
 import axios from "axios"
 import { batchSummariseCommits } from "./groq"
-
-export const octokit = new Octokit({
-    auth: process.env.GITHUB_TOKEN,
-})
+import { progressStore } from "./progress-store"
 
 const githubUrl = "https://github.com/docker/genai-stack"
 
@@ -17,12 +14,18 @@ type Response = {
     commitDate: string,
 }
 
-export const getCommitHashes = async (githubUrl: string, limit: number = 10): Promise<Response[]> => {
+export const getCommitHashes = async (githubUrl: string, githubToken?: string, limit: number = 10): Promise<Response[]> => {
     // https://github.com/docker/genai-stack
     const [ owner, repo ] = githubUrl.split("/").slice(-2)
     if (!owner || !repo) {
         throw new Error("Invalid GitHub URL")
     }
+    
+    // Create Octokit instance with provided token or fallback to env variable
+    const octokit = new Octokit({
+        auth: githubToken || process.env.GITHUB_TOKEN,
+    });
+    
     const { data } = await octokit.rest.repos.listCommits({
         owner,
         repo
@@ -39,12 +42,12 @@ export const getCommitHashes = async (githubUrl: string, limit: number = 10): Pr
     }))
 }
 
-export const pollCommits = async(projectId: string) => {
+export const pollCommits = async(projectId: string, githubToken?: string) => {
     const { project, githubUrl } = await fetchProjectGithubUrl(projectId)
     if (!githubUrl) {
         throw new Error("Project does not have a GitHub URL")
     }
-    const commitHashes = await getCommitHashes(githubUrl)
+    const commitHashes = await getCommitHashes(githubUrl, githubToken)
     const unprocessedCommits = await filterUnprocessedCommits(projectId, commitHashes)
     
     // Fetch diffs for all unprocessed commits
@@ -71,6 +74,15 @@ export const pollCommits = async(projectId: string) => {
         diffsToProcess,
         (processed, total) => {
             console.log(`Summarized commit ${processed}/${total}`);
+            // Update progress store for UI
+            progressStore.setProgress(projectId, {
+                processed,
+                total,
+                currentFile: `Processing commit ${processed}/${total}`,
+                estimatedTimeRemaining: 0,
+                status: 'in-progress',
+                phase: 'commits'
+            });
         }
     );
 

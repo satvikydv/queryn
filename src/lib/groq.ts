@@ -5,11 +5,11 @@ const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 /**
  * Rate limiter for Groq API calls
- * Free tier limits for openai/gpt-oss-20b:
+ * Free tier limits for meta-llama/llama-4-scout-17b-16e-instruct:
  * - Requests Per Minute (RPM): 30
  * - Requests Per Day (RPD): 1,000
- * - Tokens Per Minute (TPM): 8,000
- * - Tokens Per Day (TPD): 200,000
+ * - Tokens Per Minute (TPM): 30,000
+ * - Tokens Per Day (TPD): 500,000
  * 
  * We'll use 25 RPM to be safe (~0.42 requests per second)
  */
@@ -48,7 +48,7 @@ Give a concise summary of the code above, explaining its purpose and functionali
           content: prompt,
         },
       ],
-      model: "openai/gpt-oss-20b",
+      model: "meta-llama/llama-4-scout-17b-16e-instruct",
       temperature: 0.4,
       max_tokens: 200,
     });
@@ -120,7 +120,7 @@ ${diff}
           content: prompt,
         },
       ],
-      model: "openai/gpt-oss-20b",
+      model: "meta-llama/llama-4-scout-17b-16e-instruct",
       temperature: 0.3,
       max_tokens: 500,
     });
@@ -170,6 +170,51 @@ export const batchSummariseCommits = async (
         commitHash: item.commitHash,
         summary: "Error summarizing commit"
       });
+    }
+  }
+
+  return results;
+};
+
+/**
+ * Batch process code file summaries with rate limiting
+ */
+export const batchSummariseCode = async (
+  docs: Document[],
+  onProgress?: (processed: number, total: number, currentFile: string) => void
+): Promise<Array<{ text: string; fileName: string; sourceCode: string } | null>> => {
+  const results: Array<{ text: string; fileName: string; sourceCode: string } | null> = [];
+  const totalItems = docs.length;
+
+  for (let i = 0; i < totalItems; i++) {
+    const doc = docs[i];
+    
+    if (!doc) {
+      results.push(null);
+      continue;
+    }
+    
+    try {
+      const summary = await summariseCodeWithGroq(doc);
+      results.push({
+        text: summary,
+        fileName: doc.metadata.source,
+        sourceCode: doc.pageContent
+      });
+
+      // Report progress
+      if (onProgress) {
+        onProgress(i + 1, totalItems, doc.metadata.source);
+      }
+
+      // Rate limiting: delay before next request (except for the last one)
+      if (i < totalItems - 1) {
+        await delay(DELAY_BETWEEN_REQUESTS);
+      }
+
+    } catch (error) {
+      console.error(`Failed to summarize ${doc.metadata.source}:`, error);
+      results.push(null);
     }
   }
 

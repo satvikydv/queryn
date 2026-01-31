@@ -1,9 +1,10 @@
 import { GithubRepoLoader } from "@langchain/community/document_loaders/web/github";
 import { Document } from "@langchain/core/documents";
 import { generateEmbeddingsInBatches, type EmbeddingProgress } from "./gemini";
-import { summariseCodeWithGroq } from "./groq";
+import { batchSummariseCode } from "./groq";
 import { db } from "@/server/db";
 import { Octokit } from "octokit";
+import { progressStore } from "./progress-store";
 
 export const loadGithubRepo = async (
   githubUrl: string,
@@ -36,23 +37,20 @@ export const indexGithubRepo = async (
   
   console.log(`Loaded ${docs.length} files from repository`);
   
-  // First, generate all summaries
-  console.log('Generating summaries for all files...');
-  const summaries = await Promise.all(
-    docs.map(async (doc) => {
-      try {
-        const summary = await summariseCodeWithGroq(doc);
-        return {
-          text: summary,
-          fileName: doc.metadata.source,
-          sourceCode: doc.pageContent
-        };
-      } catch (error) {
-        console.error(`Error summarizing ${doc.metadata.source}:`, error);
-        return null;
-      }
-    })
-  );
+  // Generate summaries with batch processing and rate limiting
+  console.log('Generating summaries for all files with rate limiting...');
+  const summaries = await batchSummariseCode(docs, (processed, total, currentFile) => {
+    console.log(`Summarizing file ${processed}/${total}: ${currentFile}`);
+    // Update progress store for UI
+    progressStore.setProgress(projectId, {
+      processed,
+      total,
+      currentFile,
+      estimatedTimeRemaining: 0,
+      status: 'in-progress',
+      phase: 'summarizing'
+    });
+  });
   
   // Filter out failed summaries
   const validSummaries = summaries.filter((s): s is NonNullable<typeof s> => s !== null);

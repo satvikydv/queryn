@@ -8,6 +8,7 @@ interface ProgressData {
   estimatedTimeRemaining: number;
   status: 'pending' | 'in-progress' | 'completed' | 'error';
   error?: string;
+  phase?: 'summarizing' | 'embedding' | 'commits' | 'saving';
 }
 
 class ProgressStore {

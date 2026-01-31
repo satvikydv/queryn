@@ -50,15 +50,29 @@ export const projectRouter = createTRPCRouter({
         total: fileCount,
         currentFile: '',
         estimatedTimeRemaining: 0,
-        status: 'pending'
+        status: 'pending',
+        phase: 'summarizing'
       });
 
       // Index repository with progress tracking
       indexGithubRepo(project.id, input.githubUrl, input.githubToken, (progress) => {
         progressStore.setProgress(project.id, {
           ...progress,
-          status: 'in-progress'
+          status: 'in-progress',
+          phase: 'embedding'
         });
+      }).then(() => {
+        // Start commit processing after indexing
+        progressStore.setProgress(project.id, {
+          processed: fileCount,
+          total: fileCount,
+          currentFile: 'Processing commits...',
+          estimatedTimeRemaining: 0,
+          status: 'in-progress',
+          phase: 'commits'
+        });
+        
+        return pollCommits(project.id, input.githubToken);
       }).then(() => {
         progressStore.setProgress(project.id, {
           processed: fileCount,
@@ -77,9 +91,6 @@ export const projectRouter = createTRPCRouter({
           error: error.message
         });
       });
-      
-      // Poll commits from the GitHub repository (don't await, run in background)
-      pollCommits(project.id).catch(console.error);
 
       //update credits after project creation
       await ctx.db.user.update({
@@ -132,10 +143,11 @@ export const projectRouter = createTRPCRouter({
     .input(
       z.object({
         projectId: z.string(),
+        githubToken: z.string().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      await pollCommits(input.projectId);
+      await pollCommits(input.projectId, input.githubToken);
       return { success: true };
     }),
 

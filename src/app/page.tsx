@@ -1,6 +1,7 @@
 import "@/styles/landing.css";
 import Link from "next/link";
 import Image from "next/image";
+import { auth } from "@clerk/nextjs/server";
 import {
   ArrowRight,
   GitBranch,
@@ -11,7 +12,9 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  const { userId } = await auth();
+
   return (
     <div className="landing-page">
       {/* Header */}
@@ -33,12 +36,20 @@ export default function LandingPage() {
             </a>
           </nav>
           <div className="flex items-center gap-4">
-            <Link href="/sign-in" className="landing-nav-link hidden sm:block">
-              Log In
-            </Link>
-            <Link href="/sign-in" className="btn-tech-primary">
-              Get Started
-            </Link>
+            {userId ? (
+               <Link href="/dashboard" className="btn-tech-primary">
+                Dashboard
+              </Link>
+            ) : (
+              <>
+                <Link href="/sign-in" className="landing-nav-link hidden sm:block">
+                  Log In
+                </Link>
+                <Link href="/sign-in" className="btn-tech-primary">
+                  Get Started
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </header>

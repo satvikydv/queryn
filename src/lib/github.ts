@@ -43,65 +43,72 @@ export const getCommitHashes = async (githubUrl: string, githubToken?: string, l
 }
 
 export const pollCommits = async(projectId: string, githubToken?: string) => {
-    const { project, githubUrl } = await fetchProjectGithubUrl(projectId)
-    if (!githubUrl) {
-        throw new Error("Project does not have a GitHub URL")
-    }
-    const commitHashes = await getCommitHashes(githubUrl, githubToken)
-    const unprocessedCommits = await filterUnprocessedCommits(projectId, commitHashes)
-    
-    // Fetch diffs for all unprocessed commits
-    console.log(`Fetching diffs for ${unprocessedCommits.length} commits...`);
-    const diffsToProcess = await Promise.all(
-        unprocessedCommits.map(async (commit) => {
-            try {
-                const { data } = await axios.get(`${githubUrl}/commit/${commit.commitHash}.diff`, {
-                    headers: {
-                        Accept: "application/vnd.github.v3.diff",
-                    },
-                });
-                return { diff: data, commitHash: commit.commitHash };
-            } catch (error) {
-                console.error(`Error fetching diff for ${commit.commitHash}:`, error);
-                return { diff: "", commitHash: commit.commitHash };
-            }
-        })
-    );
-    
-    // Batch process summaries with rate limiting
-    console.log('Starting batch commit summary generation with rate limiting...');
-    const summaryResults = await batchSummariseCommits(
-        diffsToProcess,
-        (processed, total) => {
-            console.log(`Summarized commit ${processed}/${total}`);
-            // Update progress store for UI
-            progressStore.setProgress(projectId, {
-                processed,
-                total,
-                currentFile: `Processing commit ${processed}/${total}`,
-                estimatedTimeRemaining: 0,
-                status: 'in-progress',
-                phase: 'commits'
-            });
+    try {
+        const { project, githubUrl } = await fetchProjectGithubUrl(projectId)
+        if (!githubUrl) {
+            throw new Error("Project does not have a GitHub URL")
         }
-    );
-
-    const commits = await db.commit.createMany({
-        data: unprocessedCommits.map((commit, index) => {
-            const summaryResult = summaryResults.find(r => r.commitHash === commit.commitHash);
-            return {
-                projectId: projectId,
-                commitHash: commit.commitHash,
-                commitMessage: commit.commitMessage,
-                commitAuthorName: commit.commitAuthorName,
-                commitAuthorAvatar: commit.commitAuthorAvatar,
-                commitDate: new Date(commit.commitDate),
-                summary: summaryResult?.summary || "Error summarizing commit"
+        
+        const commitHashes = await getCommitHashes(githubUrl, githubToken)
+        const unprocessedCommits = await filterUnprocessedCommits(projectId, commitHashes)
+        
+        if (unprocessedCommits.length === 0) {
+            return { count: 0 };
+        }
+        
+        // Fetch diffs for all unprocessed commits
+        const diffsToProcess = await Promise.all(
+            unprocessedCommits.map(async (commit) => {
+                try {
+                    const { data } = await axios.get(`${githubUrl}/commit/${commit.commitHash}.diff`, {
+                        headers: {
+                            Accept: "application/vnd.github.v3.diff",
+                        },
+                    });
+                    return { diff: data, commitHash: commit.commitHash };
+                } catch (error) {
+                    console.error(`Error fetching diff for ${commit.commitHash}:`, error);
+                    return { diff: "", commitHash: commit.commitHash };
+                }
+            })
+        );
+        
+        // Batch process summaries with rate limiting
+        const summaryResults = await batchSummariseCommits(
+            diffsToProcess,
+            (processed, total) => {
+                // Update progress store for UI
+                progressStore.setProgress(projectId, {
+                    processed,
+                    total,
+                    currentFile: `Processing commit ${processed}/${total}`,
+                    estimatedTimeRemaining: 0,
+                    status: 'in-progress',
+                    phase: 'commits'
+                });
             }
-        }),
-        skipDuplicates: true
-    })
-    return commits
+        );
+
+        const commits = await db.commit.createMany({
+            data: unprocessedCommits.map((commit, index) => {
+                const summaryResult = summaryResults.find(r => r.commitHash === commit.commitHash);
+                return {
+                    projectId: projectId,
+                    commitHash: commit.commitHash,
+                    commitMessage: commit.commitMessage,
+                    commitAuthorName: commit.commitAuthorName,
+                    commitAuthorAvatar: commit.commitAuthorAvatar,
+                    commitDate: new Date(commit.commitDate),
+                    summary: summaryResult?.summary || "Error summarizing commit"
+                }
+            }),
+            skipDuplicates: true
+        })
+        return commits;
+    } catch (error) {
+        console.error('Error in pollCommits:', error);
+        throw error;
+    }
 }
 
 async function fetchProjectGithubUrl(projectId: string) {

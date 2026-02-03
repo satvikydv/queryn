@@ -11,6 +11,7 @@ import { ExternalLink } from 'lucide-react'
 const CommitLog = () => {
     const {projectId, project} = useProject()
     const { data: commits, isLoading } = api.project.getCommits.useQuery({ projectId })
+    
   return (
     <>
         <ul className='space-y-6'>
@@ -42,6 +43,11 @@ const CommitLog = () => {
                         </>
                     </li>
                 ))
+            ) : !commits || commits.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                    <p>No commits found for this project.</p>
+                    <p className="text-sm mt-2">Commits may still be processing, or there might be an issue fetching commits from the repository.</p>
+                </div>
             ) : (
             commits?.map((commit, commitIdx) => {
                 return <li key={commit.id} className='relative flex gap-x-4'>

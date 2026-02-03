@@ -82,6 +82,7 @@ export const projectRouter = createTRPCRouter({
           status: 'completed'
         });
       }).catch((error) => {
+        console.error('Error during project creation:', error);
         progressStore.setProgress(project.id, {
           processed: 0,
           total: fileCount,

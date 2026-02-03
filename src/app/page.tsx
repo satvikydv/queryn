@@ -61,13 +61,13 @@ export default async function LandingPage() {
             <div className="hero-content">
               <div className="hero-badge">
                 <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span>
-                Beta Testing
+                Beta
                 <span className="mx-2 text-zinc-600">|</span>
-                <span className="text-zinc-500">v0.9.1</span>
+                <span className="text-zinc-500">v0.9.2</span>
               </div>
               <h1 className="hero-title">
-                The OS for your <br />
-                GitHub Workflow
+                AI-powered insights <br />
+                for your GitHub repos
               </h1>
               <p className="hero-subtitle">
                 Turn your repositories into an intelligent knowledge base.

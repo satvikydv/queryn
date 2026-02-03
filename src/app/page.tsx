@@ -80,7 +80,7 @@ export default async function LandingPage() {
                   <ArrowRight className="size-4" />
                 </Link>
                 <a
-                  href="https://github.com"
+                  href="https://github.com/satvikydv/queryn"
                   target="_blank"
                   className="btn-tech-secondary"
                 >
